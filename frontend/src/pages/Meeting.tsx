@@ -16,7 +16,9 @@ const Meeting: React.FC = () => {
   // removed manual join control
 
   return (
-    <div className="container mx-auto p-4 bg-gray-900 text-gray-100 min-h-screen">
+    <div className="w-full h-screen p-4 bg-gray-900 text-gray-100">
+
+
       <h1 className="text-2xl font-bold mb-4">Meeting: {roomId}</h1>
       {state === 'connecting' && <div className="mb-2">Connecting...</div>}
       {state === 'connected' && <div className="mb-2">Connected!</div>}

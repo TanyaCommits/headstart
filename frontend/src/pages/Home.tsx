@@ -16,7 +16,8 @@ const Home: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 bg-gray-900 text-gray-100 min-h-screen">
+    <div className="w-full h-screen p-4 bg-gray-900 text-gray-100 flex flex-col justify-center items-center">
+
       <h1 className="text-2xl font-bold mb-4">Create Meeting</h1>
       <div className="mb-2">
         <label className="block mb-1">Host Name</label>
