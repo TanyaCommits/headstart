@@ -27,12 +27,14 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
   const reconnectRef = useRef(0);
   const currentParamsRef = useRef<{ roomId: string; token?: string } | null>(null);
 
+  const WS_URL = process.env.REACT_APP_API_URL?.replace('http', 'ws') || 'ws://localhost:8000';
+
   const connect = (roomId: string, token?: string) => {
     currentParamsRef.current = { roomId, token };
     setState('connecting');
 
     const query = token ? '?token=' + token : '';
-    const ws = new WebSocket('wss://localhost:8000/ws/meetings/' + roomId + query);
+    const ws = new WebSocket(`${WS_URL}/ws/meetings/${roomId}${query}`);
 
     ws.onopen = () => {
       setState('connected');

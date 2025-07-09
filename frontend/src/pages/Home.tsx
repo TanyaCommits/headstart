@@ -6,13 +6,28 @@ const Home: React.FC = () => {
   const [joinId, setJoinId] = useState('');
   // removed join token requirement
   const navigate = useNavigate();
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
   const createMeeting = async () => {
-    // TODO: call backend API: POST /api/meetings with hostName
-    // const res = await fetch('/api/meetings', { method: 'POST', body: JSON.stringify({ hostName }) });
-    // const { roomId } = await res.json();
-    const roomId = 'room123'; // placeholder
-    navigate('/meet/' + roomId);
+    if (!hostName) {
+      console.warn('Host name is required to create a meeting');
+      return;
+    }
+    try {
+      const response = await fetch(`${API_URL}/api/meetings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostName }),
+      });
+      if (!response.ok) {
+        console.error('Failed to create meeting', response.statusText);
+        return;
+      }
+      const data = await response.json();
+      navigate(`/meet/${data.room_id}`);
+    } catch (err) {
+      console.error('Error creating meeting', err);
+    }
   };
 
   return (
