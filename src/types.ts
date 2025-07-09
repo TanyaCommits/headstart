@@ -1,0 +1,1 @@
+export type ConnectionState = 'connecting' | 'connected' | 'error' | 'disconnected'; 
