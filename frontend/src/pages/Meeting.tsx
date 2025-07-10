@@ -8,16 +8,14 @@ import { MediaStreamInfo } from '../types';
 import { deleteMeeting } from '../utils/api';
 import { clearAllStorage, clearWebSocketStorage, clearMediaStorage } from '../utils/storage';
 import { isValidRoomIdFormat } from '../utils/clearOldData';
+import { handleSignal } from '../utils/peerConnections';
 
 const Meeting: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-
-  const [isLeavingMeeting, setIsLeavingMeeting] = useState(false);
-
-  
-
   const { state, connect, disconnect, sendSignal } = useWebSocket();
+  const [isLeavingMeeting, setIsLeavingMeeting] = useState(false);
+  const [remoteStreams, setRemoteStreams] = useState<MediaStreamInfo[]>([]);
 
   const {
     stream,
@@ -28,44 +26,51 @@ const Meeting: React.FC = () => {
     startStream,
     stopStream
   } = useMediaStream();
-  
+
+  // Handle incoming media stream from remote peer
+  const handleRemoteTrack = useCallback((userId: string, remoteStream: MediaStream) => {
+    setRemoteStreams(prev => {
+      const exists = prev.some(s => s.userId === userId);
+      if (exists) return prev;
+      return [...prev, { stream: remoteStream, userId, isLocal: false }];
+    });
+  }, []);
+
+  // Handle incoming signal messages
+  const handleSignalMessage = useCallback((msg: any) => {
+    if (stream) {
+      handleSignal(msg, stream, sendSignal, handleRemoteTrack);
+    }
+  }, [stream, sendSignal, handleRemoteTrack]);
+
   useEffect(() => {
     if (roomId) {
       console.log(`Connecting to room: ${roomId}`);
-      connect(roomId);
+      connect(roomId, undefined, handleSignalMessage);
     }
     return () => {
       disconnect();
     };
-  }, [roomId]); // Remove 'connect' from dependencies to prevent reconnection loops
+  }, [roomId]); // Skip connect in deps to avoid reconnection loops
 
   useEffect(() => {
     if (state === 'connected' && !stream) {
       console.log('Starting media stream...');
       startStream();
     }
-  }, [state]); // Remove 'startStream' from dependencies
+  }, [state]); // Trigger once on state change
 
-  // Remove this useEffect as cleanup is handled above
-
-  // Cleanup on page unload/refresh
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      // Clear storage when user navigates away/refreshes
       clearWebSocketStorage();
       clearMediaStorage();
-      
-      // Stop streams
       stopStream();
       disconnect();
-      
-      // Optional: Show confirmation dialog
       event.preventDefault();
       event.returnValue = 'Are you sure you want to leave the meeting?';
     };
 
     const handleUnload = () => {
-      // Final cleanup when page is actually unloading
       clearAllStorage();
     };
 
@@ -76,42 +81,28 @@ const Meeting: React.FC = () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('unload', handleUnload);
     };
-  }, []); // Empty dependency array to prevent re-registering listeners
+  }, []);
 
   const handleLeaveRoom = async () => {
-    if (isLeavingMeeting) return; // Prevent multiple clicks
-    
+    if (isLeavingMeeting) return;
     setIsLeavingMeeting(true);
-    
     try {
-      // Stop media stream first
       stopStream();
-      
-      // Disconnect WebSocket
       disconnect();
-      
-      // Delete the meeting room from backend
       if (roomId) {
         const result = await deleteMeeting(roomId);
         if (result.success) {
           console.log('Meeting room deleted successfully:', result.data?.message);
         } else {
           console.error('Failed to delete meeting room:', result.error);
-          // Continue with cleanup even if deletion fails
         }
       }
-      
-      // Clear all client-side storage
       clearAllStorage();
       clearWebSocketStorage();
       clearMediaStorage();
-      
-      // Navigate back to home
       navigate('/', { replace: true });
-      
     } catch (error) {
       console.error('Error during leave meeting:', error);
-      // Still navigate home even if cleanup fails
       navigate('/', { replace: true });
     } finally {
       setIsLeavingMeeting(false);
@@ -140,12 +131,10 @@ const Meeting: React.FC = () => {
     );
   }
 
-  // Create stream info for the local user
-  const streams: MediaStreamInfo[] = stream ? [{
-    stream,
-    userId: 'local-user',
-    isLocal: true
-  }] : [];
+  const allStreams: MediaStreamInfo[] = [
+    ...(stream ? [{ stream, userId: 'local-user', isLocal: true }] : []),
+    ...remoteStreams,
+  ];
 
   return (
     <div className="w-full h-screen flex flex-col bg-gray-900 text-gray-100">
@@ -174,8 +163,8 @@ const Meeting: React.FC = () => {
 
       {/* Video area */}
       <div className="flex-1 p-4">
-        {streams.length > 0 ? (
-          <VideoGrid streams={streams} />
+        {allStreams.length > 0 ? (
+          <VideoGrid streams={allStreams} />
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center text-gray-500">
@@ -202,4 +191,4 @@ const Meeting: React.FC = () => {
   );
 };
 
-export default Meeting; 
+export default Meeting;

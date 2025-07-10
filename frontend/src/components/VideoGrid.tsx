@@ -2,35 +2,18 @@ import React from 'react';
 import { MediaStreamInfo } from '../types';
 import VideoTile from './VideoTile';
 
-interface VideoGridProps {
+interface Props {
   streams: MediaStreamInfo[];
-  className?: string;
 }
 
-const VideoGrid: React.FC<VideoGridProps> = ({ streams, className = '' }) => {
-  const getGridCols = (count: number) => {
-    if (count === 1) return 'grid-cols-1';
-    if (count === 2) return 'grid-cols-2';
-    if (count <= 4) return 'grid-cols-2';
-    if (count <= 6) return 'grid-cols-3';
-    return 'grid-cols-4';
-  };
-
-  const gridCols = getGridCols(streams.length);
-
+const VideoGrid: React.FC<Props> = ({ streams }) => {
   return (
-    <div className={`grid ${gridCols} gap-4 w-full h-full ${className}`}>
-      {streams.map((streamInfo, index) => (
-        <VideoTile
-          key={streamInfo.userId || index}
-          stream={streamInfo.stream}
-          userId={streamInfo.userId}
-          isLocal={streamInfo.isLocal}
-          className="aspect-video"
-        />
+    <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      {streams.map((streamInfo) => (
+        <VideoTile key={streamInfo.userId} streamInfo={streamInfo} />
       ))}
     </div>
   );
 };
 
-export default VideoGrid; 
+export default VideoGrid;

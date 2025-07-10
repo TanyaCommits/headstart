@@ -116,3 +116,11 @@ export function closeAllPeerConnections() {
   });
   peerConnections.clear();
 }
+export function removePeerConnection(userId: string) {
+    const pc = peerConnections.get(userId);
+    if (pc) {
+      pc.close();
+      peerConnections.delete(userId);
+    }
+  }
+  

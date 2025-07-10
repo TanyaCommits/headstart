@@ -11,7 +11,7 @@ import { ConnectionState } from '../types';
 interface IWebSocketContext {
   socket: WebSocket | null;
   state: ConnectionState;
-  connect: (roomId: string, token?: string) => void;
+  connect: (roomId: string, token?: string, onSignal?: (msg: any) => void) => void;
   disconnect: () => void;
   sendSignal: (data: any) => void;
 }
@@ -34,7 +34,7 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [state, setState] = useState<ConnectionState>('disconnected');
   const reconnectRef = useRef(0);
-  const currentParamsRef = useRef<{ roomId: string; token?: string } | null>(
+  const currentParamsRef = useRef<{ roomId: string; token?: string, onSignal?: (msg: any) => void } | null>(
     null
   );
 
@@ -42,13 +42,13 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
     ? process.env.REACT_APP_API_URL.replace(/^http/, 'ws')
     : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
 
-  const connect = (roomId: string, token?: string) => {
+  const connect = (roomId: string, token?: string, onSignal?: (msg: any) => void) => {
     if (socket) {
       socket.close();
       setSocket(null);
     }
 
-    currentParamsRef.current = { roomId, token };
+    currentParamsRef.current = { roomId, token, onSignal };
     setState('connecting');
 
     const query = token ? `?token=${token}` : '';
@@ -65,9 +65,7 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
         try {
           const message = JSON.parse(event.data);
           console.log('Signal received:', message);
-
-          // Handle signaling message in your app here (optional callback/event bus)
-          // For example: pass to RTCPeerConnection or dispatch via context
+          onSignal?.(message);  // ✅ invoke the callback if provided
         } catch (e) {
           console.error('Failed to parse message:', e);
         }
@@ -95,7 +93,11 @@ export const WebSocketProvider = ({ children }: WebSocketProviderProps) => {
         console.log(`Reconnecting in ${timeout}ms...`);
         setTimeout(() => {
           if (currentParamsRef.current) {
-            connect(currentParamsRef.current.roomId, currentParamsRef.current.token);
+            connect(
+              currentParamsRef.current.roomId,
+              currentParamsRef.current.token,
+              currentParamsRef.current.onSignal
+            );
           }
         }, timeout);
       } else {
