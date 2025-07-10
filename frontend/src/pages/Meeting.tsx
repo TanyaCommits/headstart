@@ -12,13 +12,12 @@ import { isValidRoomIdFormat } from '../utils/clearOldData';
 const Meeting: React.FC = () => {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
-  const { state, connect, disconnect, sendAudioChunk } = useWebSocket();
+
   const [isLeavingMeeting, setIsLeavingMeeting] = useState(false);
 
-  const handleAudioChunk = useCallback((chunkData: { buffer: ArrayBuffer; timestamp: number }) => {
-    sendAudioChunk(chunkData.buffer);
-    console.log(`Audio chunk sent: ${chunkData.buffer.byteLength} bytes at ${new Date(chunkData.timestamp).toLocaleTimeString()}`);
-  }, [sendAudioChunk]);
+  
+
+  const { state, connect, disconnect, sendSignal } = useWebSocket();
 
   const {
     stream,
@@ -28,8 +27,8 @@ const Meeting: React.FC = () => {
     toggleAudio,
     startStream,
     stopStream
-  } = useMediaStream({ onAudioChunk: handleAudioChunk });
-
+  } = useMediaStream();
+  
   useEffect(() => {
     if (roomId) {
       console.log(`Connecting to room: ${roomId}`);
