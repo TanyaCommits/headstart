@@ -4,9 +4,8 @@ import { useNavigate } from 'react-router-dom';
 const Home: React.FC = () => {
   const [hostName, setHostName] = useState('');
   const [joinId, setJoinId] = useState('');
-  // removed join token requirement
   const navigate = useNavigate();
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+  const API_URL = process.env.REACT_APP_API_URL || '';
 
   const createMeeting = async () => {
     if (!hostName) {
